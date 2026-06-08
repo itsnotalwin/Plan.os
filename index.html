@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="Personal execution command center for managing GitHub repositories and development workflows">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Repo OS">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Repo Work Tracker OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root,[data-theme="dark"]{
+  --bg:#111;--bg-card:#181818;--bg-elevated:#1e1e1e;--bg-input:#151515;
+  --bg-hover:#222;--bg-active:#282828;
+  --border:#252525;--border-light:#333;
+  --text:#e8e8e8;--text-dim:#a0a0a0;--text-muted:#5a5a5a;--text-faint:#3a3a3a;
+  --red:#e05555;--orange:#d4943a;--green:#55b87a;--blue:#5599cc;
+  --status-idea:#777;--status-building:#bbb;--status-testing:#999;
+  --status-stuck:var(--red);--status-deployed:var(--green);--status-dead:#555;
+  --shadow:0 4px 16px rgba(0,0,0,.4);
+  --overlay-bg:rgba(0,0,0,.65);
+  --sidebar-bg:#111;
+}
+
+[data-theme="light"]{
+  --bg:#f5f5f5;--bg-card:#fff;--bg-elevated:#fafafa;--bg-input:#f0f0f0;
+  --bg-hover:#eaeaea;--bg-active:#e0e0e0;
+  --border:#e0e0e0;--border-light:#ccc;
+  --text:#1a1a1a;--text-dim:#555;--text-muted:#999;--text-faint:#bbb;
+  --red:#d03030;--orange:#c07a20;--green:#3a9a5a;--blue:#3377aa;
+  --status-idea:#888;--status-building:#555;--status-testing:#666;
+  --status-stuck:var(--red);--status-deployed:var(--green);--status-dead:#999;
+  --shadow:0 4px 16px rgba(0,0,0,.08);
+  --overlay-bg:rgba(0,0,0,.35);
+  --sidebar-bg:#f5f5f5;
+}
+
+html{font-size:15px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow:hidden;height:100vh;transition:background .2s,color .2s}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+::selection{background:var(--bg-active);color:var(--text)}
+input,textarea,select,button{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:220px;min-width:220px;background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;transition:transform .2s ease,opacity .2s ease;overflow:hidden}
+#sidebar.collapsed{transform:translateX(-220px);min-width:0;width:0;opacity:0;pointer-events:none}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#header{height:52px;min-height:52px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;z-index:50;flex-shrink:0}
+#content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+#view-container{flex:1;overflow-y:auto;overflow-x:hidden;padding:28px 32px}
+
+.sidebar-header{padding:18px 18px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sidebar-brand{font-size:15px;font-weight:700;letter-spacing:-.3px;display:flex;align-items:center;gap:8px}
+.sidebar-brand span{color:var(--text-muted);font-weight:400;font-size:12px}
+.sidebar-nav{flex:1;overflow-y:auto;padding:12px 10px}
+.nav-section{margin-bottom:20px}
+.nav-section-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);padding:6px 10px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:4px;cursor:pointer;transition:background .12s;font-size:13px;color:var(--text-dim);font-weight:500;white-space:nowrap}
+.nav-item:hover{background:var(--bg-hover);color:var(--text)}
+.nav-item.active{background:var(--bg-active);color:var(--text)}
+.nav-item .ni{width:18px;text-align:center;font-size:13px;opacity:.6;flex-shrink:0}
+.nav-item .nb{margin-left:auto;font-size:11px;color:var(--text-muted);background:var(--bg-active);padding:1px 7px;border-radius:10px;font-weight:500;flex-shrink:0}
+.nav-item .nb.urg{background:rgba(224,85,85,.15);color:var(--red)}
+.sidebar-footer{padding:14px 18px;border-top:1px solid var(--border);font-size:10px;color:var(--text-faint);line-height:1.5;flex-shrink:0}
+
+.h-toggle{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:16px;color:var(--text-dim);transition:background .12s;flex-shrink:0}
+.h-toggle:hover{background:var(--bg-hover)}
+.h-search{flex:1;max-width:420px;position:relative;min-width:0}
+.h-search input{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:8px 14px 8px 34px;color:var(--text);font-size:13px;outline:none;transition:border-color .15s}
+.h-search input:focus{border-color:var(--border-light)}
+.h-search input::placeholder{color:var(--text-muted)}
+.h-search .si{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none}
+.h-actions{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
+.h-btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;color:var(--text-dim);transition:all .12s;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.h-btn:hover{background:var(--bg-hover);color:var(--text)}
+.h-btn.pri{background:var(--text);color:var(--bg)}
+.h-btn.pri:hover{opacity:.85}
+.h-kbd{font-family:'JetBrains Mono',Consolas,Monaco,monospace;font-size:10px;color:var(--text-muted);border:1px solid var(--border);padding:1px 5px;border-radius:3px;margin-left:4px}
+
+.theme-toggle{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:16px;color:var(--text-dim);transition:all .12s;flex-shrink:0}
+.theme-toggle:hover{background:var(--bg-hover);color:var(--text)}
+
+.dash-title{font-size:22px;font-weight:700;letter-spacing:-.5px;margin-bottom:2px}
+.dash-sub{font-size:13px;color:var(--text-muted);margin-bottom:24px}
+.stats{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap}
+.stat{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px 18px;flex:1;min-width:100px}
+.stat-val{font-size:24px;font-weight:700;line-height:1.1;letter-spacing:-.5px}
+.stat-lbl{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-top:4px}
+.stat.urg{border-color:rgba(224,85,85,.3)}
+.stat.urg .stat-val{color:var(--red)}
+
+.toolbar{display:flex;align-items:center;gap:6px;margin-bottom:20px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.tg{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+.ts{width:1px;height:18px;background:var(--border);margin:0 6px;flex-shrink:0}
+.fbtn{padding:5px 12px;border-radius:8px;font-size:12px;font-weight:500;color:var(--text-muted);transition:all .12s;white-space:nowrap}
+.fbtn:hover{color:var(--text-dim);background:var(--bg-hover)}
+.fbtn.on{color:var(--text);background:var(--bg-active)}
+.ssel{background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--text-dim);font-size:12px;outline:none;cursor:pointer;font-weight:500}
+.ssel option{background:var(--bg-card)}
+
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+.pcard{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:20px;cursor:pointer;transition:border-color .15s,background .15s;position:relative}
+.pcard:hover{border-color:var(--border-light);background:var(--bg-elevated)}
+.pcard.urg{border-left:3px solid var(--red)}
+.pcard.odue{border-left:3px solid var(--orange)}
+.pcard.stale{border-left:3px solid var(--text-faint)}
+.pcard-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px}
+.pcard-name{font-size:15px;font-weight:600;flex:1;letter-spacing:-.2px;word-break:break-word}
+.pcard-status{font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;flex-shrink:0}
+.s-idea{background:rgba(119,119,119,.12);color:var(--status-idea)}
+.s-building{background:rgba(187,187,187,.1);color:var(--status-building)}
+.s-testing{background:rgba(153,153,153,.1);color:var(--status-testing)}
+.s-stuck{background:rgba(224,85,85,.12);color:var(--status-stuck)}
+.s-deployed{background:rgba(85,184,122,.12);color:var(--status-deployed)}
+.s-dead{background:rgba(85,85,85,.15);color:var(--status-dead)}
+.pcard-url{font-size:12px;color:var(--text-muted);margin-bottom:10px;font-family:'JetBrains Mono',Consolas,Monaco,monospace;word-break:break-all}
+.pcard-na{background:var(--bg);border-radius:8px;padding:10px 14px;margin-bottom:12px}
+.pcard-na-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px}
+.pcard-na-txt{font-size:13px;line-height:1.5;color:var(--text)}
+.pcard-meta{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text-muted);margin-bottom:10px}
+.pcard-meta span{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.pcard-prog{margin-bottom:8px}
+.pbar{height:4px;background:var(--bg);border-radius:4px;overflow:hidden}
+.pfill{height:100%;background:var(--text-muted);border-radius:4px;transition:width .3s ease}
+.pcard-prog-lbl{font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;margin-top:4px}
+.pcard-tasks{display:flex;gap:10px;font-size:11px;color:var(--text-muted)}
+.pcard-tasks .bl{color:var(--red)}
+.pcard-acts{position:absolute;top:12px;right:12px;display:flex;gap:2px;opacity:0;transition:opacity .12s}
+.pcard:hover .pcard-acts{opacity:1}
+.ca-btn{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:12px;color:var(--text-muted);transition:all .12s}
+.ca-btn:hover{background:var(--bg-hover);color:var(--text)}
+.pcard-notes{margin-top:10px;font-size:12px;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5}
+
+.bulk-bar{background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;font-size:12px;flex-wrap:wrap}
+.bulk-bar .sel-cnt{color:var(--text-dim);font-weight:600}
+.bulk-bar .ba{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+
+.ws{display:flex;height:100%;overflow:hidden}
+.ws-main{flex:1;overflow-y:auto;padding:24px 28px;min-width:0}
+.ws-back{font-size:13px;color:var(--text-muted);font-weight:500;display:inline-flex;align-items:center;gap:4px;margin-bottom:18px;padding:6px 12px;border-radius:4px;transition:all .12s}
+.ws-back:hover{background:var(--bg-hover);color:var(--text)}
+.ws-header{margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.ws-title{font-size:22px;font-weight:700;letter-spacing:-.5px;word-break:break-word}
+.ws-url{font-size:12px;color:var(--text-muted);margin-top:4px;font-family:'JetBrains Mono',Consolas,Monaco,monospace;word-break:break-all}
+.ws-bar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.ws-bar span{font-size:12px;color:var(--text-muted);font-weight:500;white-space:nowrap}
+.ws-na{background:var(--bg);border-radius:8px;padding:14px 18px;margin-bottom:18px}
+.ws-na-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px}
+.ws-na-txt{font-size:14px;line-height:1.6;color:var(--text);outline:none;min-height:20px}
+.ws-na-txt:empty::before{content:attr(data-placeholder);color:var(--text-muted)}
+.ws-notes{width:100%;min-height:100px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-size:13px;line-height:1.7;resize:vertical;outline:none;font-family:inherit}
+.ws-notes:focus{border-color:var(--border-light)}
+.ws-field-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px}
+
+.ws-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto;flex-shrink:0}
+.ws-tab{padding:10px 18px;font-size:12px;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .12s;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.ws-tab:hover{color:var(--text-dim)}
+.ws-tab.on{color:var(--text);border-bottom-color:var(--text)}
+
+.tboard{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tcol{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;min-height:180px;display:flex;flex-direction:column}
+.tcol-hd{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim)}
+.tcol-cnt{font-size:10px;color:var(--text-muted);background:var(--bg-active);padding:1px 7px;border-radius:10px}
+.tcol-bd{flex:1;padding:8px;overflow-y:auto;min-height:0}
+.titem{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;margin-bottom:6px;font-size:13px;cursor:grab;transition:all .12s;position:relative}
+.titem:hover{border-color:var(--border-light)}
+.titem.drag{opacity:.4}
+.titem-title{margin-bottom:3px;line-height:1.4;word-break:break-word}
+.titem-meta{font-size:10px;color:var(--text-muted)}
+.titem-acts{position:absolute;top:4px;right:4px;display:flex;gap:1px;opacity:0;transition:opacity .12s}
+.titem:hover .titem-acts{opacity:1}
+.tm-btn{width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:3px;font-size:10px;color:var(--text-muted);transition:all .12s}
+.tm-btn:hover{background:var(--bg-hover);color:var(--text)}
+.tadd{width:100%;padding:8px;border:1px dashed var(--border);border-radius:4px;font-size:12px;color:var(--text-muted);transition:all .12s;text-align:center;margin-top:4px}
+.tadd:hover{border-color:var(--text-muted);color:var(--text-dim)}
+
+.ms-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.ms-item:last-child{border-bottom:none}
+.ms-check{width:18px;height:18px;border:1.5px solid var(--border-light);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;flex-shrink:0}
+.ms-check:hover{border-color:var(--text-muted)}
+.ms-check.done{background:var(--text-muted);border-color:var(--text-muted)}
+.ms-check.done::after{content:'✓';font-size:11px;color:var(--bg);font-weight:700}
+.ms-title{flex:1;word-break:break-word}
+.ms-title.done{text-decoration:line-through;color:var(--text-muted)}
+.ms-due{font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0}
+
+.log-e{padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.log-e:last-child{border-bottom:none}
+.log-t{font-size:10px;color:var(--text-muted);margin-bottom:3px}
+.log-c{color:var(--text-dim);line-height:1.5;word-break:break-word}
+
+.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.icard{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:20px;transition:all .12s}
+.icard:hover{border-color:var(--border-light)}
+.icard-t{font-size:15px;font-weight:600;margin-bottom:6px;letter-spacing:-.2px;word-break:break-word}
+.icard-d{font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.icard-m{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text-muted);flex-wrap:wrap;gap:8px}
+.icard-a{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.promo{padding:4px 12px;background:var(--text);color:var(--bg);border-radius:4px;font-size:11px;font-weight:600;transition:all .12s;white-space:nowrap}
+.promo:hover{opacity:.85}
+
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.kcard{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:20px;cursor:pointer;transition:all .12s}
+.kcard:hover{border-color:var(--border-light)}
+.kcard-t{font-size:15px;font-weight:600;margin-bottom:6px;letter-spacing:-.2px;word-break:break-word}
+.kcard-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.ktag{font-size:10px;padding:2px 8px;background:var(--bg-active);border-radius:10px;color:var(--text-muted);font-weight:500}
+.kcard-p{font-size:13px;color:var(--text-dim);line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.kcard-m{font-size:11px;color:var(--text-muted);margin-top:10px}
+
+.act-list{max-height:none}
+.act-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.act-item:last-child{border-bottom:none}
+.act-dot{width:6px;height:6px;border-radius:50%;margin-top:7px;flex-shrink:0}
+.act-text{flex:1;color:var(--text-dim);line-height:1.5;word-break:break-word}
+.act-time{font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0}
+
+.m-overlay{position:fixed;inset:0;background:var(--overlay-bg);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:all .18s ease}
+.m-overlay.open{opacity:1;visibility:visible}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;transform:scale(.96);transition:transform .18s ease}
+.m-overlay.open .modal{transform:scale(1)}
+.m-hd{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.m-title{font-size:15px;font-weight:700;letter-spacing:-.2px}
+.m-close{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:16px;color:var(--text-muted);transition:all .12s;flex-shrink:0}
+.m-close:hover{background:var(--bg-hover);color:var(--text)}
+.m-bd{padding:22px;overflow-y:auto;flex:1;min-height:0}
+.m-ft{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;flex-wrap:wrap}
+
+.fg{margin-bottom:16px}
+.fl{display:block;font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.fi{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;transition:border-color .12s}
+.fi:focus{border-color:var(--border-light)}
+.fi::placeholder{color:var(--text-muted)}
+textarea.fi{min-height:80px;resize:vertical;line-height:1.6}
+select.fi{cursor:pointer}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;transition:all .12s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-pri{background:var(--text);color:var(--bg)}
+.btn-pri:hover{opacity:.85}
+.btn-sec{background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-dim)}
+.btn-sec:hover{border-color:var(--border-light);color:var(--text)}
+.btn-del{background:rgba(224,85,85,.1);color:var(--red);border:1px solid rgba(224,85,85,.2)}
+.btn-del:hover{background:rgba(224,85,85,.2)}
+.btn-sm{padding:5px 12px;font-size:11px}
+
+.toast-box{position:fixed;bottom:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:13px;color:var(--text);box-shadow:var(--shadow);animation:tIn .18s ease,tOut .18s ease 2.8s forwards;pointer-events:auto;max-width:340px}
+.toast.err{border-color:var(--red)}
+.toast.ok{border-color:var(--green)}
+@keyframes tIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes tOut{from{opacity:1}to{opacity:0;transform:translateY(-8px)}}
+
+.empty{text-align:center;padding:60px 20px;color:var(--text-muted)}
+.empty-icon{font-size:36px;margin-bottom:10px;opacity:.25}
+.empty-t{font-size:14px;color:var(--text-muted);margin-bottom:4px;font-weight:500}
+.empty-d{font-size:12px;color:var(--text-faint)}
+
+.sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sc-item{display:flex;align-items:center;gap:10px;font-size:13px;padding:4px 0}
+.sc-key{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-family:'JetBrains Mono',Consolas,Monaco,monospace;font-size:11px;color:var(--text-dim);min-width:60px;text-align:center;font-weight:500}
+
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+@media(max-width:900px){.sb-overlay.vis{display:block}}
+
+@media(max-width:1200px){.pgrid{grid-template-columns:repeat(auto-fill,minmax(310px,1fr))}.tboard{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){
+  #sidebar{position:fixed;left:0;top:0;bottom:0;box-shadow:4px 0 24px rgba(0,0,0,.5)}
+  #view-container{padding:20px 16px}
+  .tboard{grid-template-columns:1fr 1fr}
+  .frow{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .pgrid,.igrid,.kgrid{grid-template-columns:1fr}
+  .tboard{grid-template-columns:1fr}
+  .stats{flex-direction:column}
+  .stat{min-width:100%}
+  .h-search{max-width:none}
+  .h-kbd{display:none}
+  .toolbar{gap:4px}
+  .ts{display:none}
+  .modal{max-width:100%;margin:8px}
+  .sc-grid{grid-template-columns:1fr}
+  .dash-title{font-size:18px}
+  #view-container{padding:16px 12px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="sb-overlay" id="sbOverlay" role="presentation"></div>
+  <aside id="sidebar" aria-label="Navigation">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">Repo OS <span>v1.0</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">Navigate</div>
+        <div class="nav-item active" data-view="dashboard" role="button" tabindex="0"><span class="ni" aria-hidden="true">◈</span>Dashboard<span class="nb" id="nCp">0</span></div>
+        <div class="nav-item" data-view="ideas" role="button" tabindex="0"><span class="ni" aria-hidden="true">◇</span>Ideas<span class="nb" id="nCi">0</span></div>
+        <div class="nav-item" data-view="knowledge" role="button" tabindex="0"><span class="ni" aria-hidden="true">▣</span>Knowledge<span class="nb" id="nCk">0</span></div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Quick Filters</div>
+        <div class="nav-item" data-filter="stuck" role="button" tabindex="0"><span class="ni" aria-hidden="true">⚠</span>Blocked<span class="nb urg" id="nCs">0</span></div>
+        <div class="nav-item" data-filter="building" role="button" tabindex="0"><span class="ni" aria-hidden="true">⚙</span>Building<span class="nb" id="nCb">0</span></div>
+        <div class="nav-item" data-filter="critical" role="button" tabindex="0"><span class="ni" aria-hidden="true">▲</span>Critical</div>
+        <div class="nav-item" data-filter="stale" role="button" tabindex="0"><span class="ni" aria-hidden="true">○</span>Stale 7d+</div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">System</div>
+        <div class="nav-item" data-view="activity" role="button" tabindex="0"><span class="ni" aria-hidden="true">◷</span>Activity</div>
+        <div class="nav-item" data-action="shortcuts" role="button" tabindex="0"><span class="ni" aria-hidden="true">⌨</span>Shortcuts</div>
+        <div class="nav-item" data-action="export" role="button" tabindex="0"><span class="ni" aria-hidden="true">↓</span>Export</div>
+        <div class="nav-item" data-action="import" role="button" tabindex="0"><span class="ni" aria-hidden="true">↑</span>Import</div>
+      </div>
+    </nav>
+    <div class="sidebar-footer">All data stored locally in your browser</div>
+  </aside>
+  <div id="main">
+    <header id="header">
+      <button class="h-toggle" id="sbToggle" aria-label="Toggle sidebar">☰</button>
+      <div class="h-search"><span class="si" aria-hidden="true">⌕</span><input type="text" id="gSearch" placeholder="Search everything..." autocomplete="off" aria-label="Search"></div>
+      <div class="h-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">☀</button>
+        <button class="h-btn pri" id="bAddP">+ Project<span class="h-kbd">N</span></button>
+        <button class="h-btn" id="bAddI">+ Idea</button>
+        <button class="h-btn" id="bAddK">+ Note</button>
+      </div>
+    </header>
+    <div id="content"><main id="view-container"></main></div>
+  </div>
+</div>
+<div class="m-overlay" id="mOverlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="m-hd"><span class="m-title" id="mTitle">Modal</span><button class="m-close" id="mClose" aria-label="Close">✕</button></div>
+    <div class="m-bd" id="mBody"></div>
+    <div class="m-ft" id="mFoot"></div>
+  </div>
+</div>
+<div class="toast-box" id="toastBox" aria-live="polite"></div>
+<input type="file" id="impFile" accept=".json" style="display:none" aria-hidden="true">
+
+<script>
+'use strict';
+
+/* ============================================================
+   SAFE STORAGE — all localStorage wrapped in try/catch
+   ============================================================ */
+const Storage = {
+  get(key) {
+    try { return JSON.parse(localStorage.getItem(key)); }
+    catch { return null; }
+  },
+  set(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); return true; }
+    catch (e) { console.warn('Storage write failed:', e.message); return false; }
+  },
+  getStr(key) {
+    try { return localStorage.getItem(key); }
+    catch { return null; }
+  },
+  setStr(key, val) {
+    try { localStorage.setItem(key, val); return true; }
+    catch { return false; }
+  }
+};
+
+/* ============================================================
+   THEME
+   ============================================================ */
+const Theme = {
+  key: 'rwos_theme',
+  current() { return Storage.getStr(this.key) || 'dark'; },
+  set(t) {
+    Storage.setStr(this.key, t);
+    document.documentElement.setAttribute('data-theme', t);
+    var btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = t === 'dark' ? '☀' : '☾';
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = t === 'dark' ? '#111111' : '#f5f5f5';
+  },
+  toggle() { this.set(this.current() === 'dark' ? 'light' : 'dark'); },
+  init() { this.set(this.current()); }
+};
+
+/* ============================================================
+   DATA LAYER
+   ============================================================ */
+var DB = {
+  _g: function(k) { var r = Storage.get('rw_' + k); return Array.isArray(r) ? r : []; },
+  _s: function(k, v) { Storage.set('rw_' + k, v); },
+
+  projects: {
+    all: function() { return DB._g('projects'); },
+    save: function(a) { DB._s('projects', a); },
+    add: function(p) {
+      var a = DB.projects.all();
+      p.id = 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      p.createdAt = new Date().toISOString();
+      p.lastUpdated = p.createdAt;
+      a.unshift(p);
+      DB.projects.save(a);
+      DB.act.add('created', 'Created project "' + p.name + '"', p.id);
+      return p;
+    },
+    upd: function(id, u) {
+      var a = DB.projects.all(), i = -1;
+      for (var j = 0; j < a.length; j++) { if (a[j].id === id) { i = j; break; } }
+      if (i > -1) {
+        for (var k in u) { if (u.hasOwnProperty(k)) a[i][k] = u[k]; }
+        a[i].lastUpdated = new Date().toISOString();
+        DB.projects.save(a);
+        return a[i];
+      }
+      return null;
+    },
+    del: function(id) {
+      var a = DB.projects.all(), p = null, out = [];
+      for (var i = 0; i < a.length; i++) { if (a[i].id === id) p = a[i]; else out.push(a[i]); }
+      DB.projects.save(out);
+      DB.tasks.delProj(id);
+      if (p) DB.act.add('deleted', 'Deleted project "' + p.name + '"', id);
+    },
+    get: function(id) {
+      var a = DB.projects.all();
+      for (var i = 0; i < a.length; i++) { if (a[i].id === id) return a[i]; }
+      return null;
+    }
+  },
+
+  tasks: {
+    all: function() { return DB._g('tasks'); },
+    save: function(a) { DB._s('tasks', a); },
+    byProj: function(pid) {
+      var all = DB.tasks.all(), out = [];
+      for (var i = 0; i < all.length; i++) { if (all[i].projectId === pid) out.push(all[i]); }
+      return out;
+    },
+    add: function(t) {
+      var a = DB.tasks.all();
+      t.id = 't_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      t.createdAt = new Date().toISOString();
+      t.updatedAt = t.createdAt;
+      a.push(t);
+      DB.tasks.save(a);
+      return t;
+    },
+    upd: function(id, u) {
+      var a = DB.tasks.all(), i = -1;
+      for (var j = 0; j < a.length; j++) { if (a[j].id === id) { i = j; break; } }
+      if (i > -1) {
+        for (var k in u) { if (u.hasOwnProperty(k)) a[i][k] = u[k]; }
+        a[i].updatedAt = new Date().toISOString();
+        DB.tasks.save(a);
+        return a[i];
+      }
+      return null;
+    },
+    del: function(id) {
+      var a = DB.tasks.all(), out = [];
+      for (var i = 0; i < a.length; i++) { if (a[i].id !== id) out.push(a[i]); }
+      DB.tasks.save(out);
+    },
+    delProj: function(pid) {
+      var a = DB.tasks.all(), out = [];
+      for (var i = 0; i < a.length; i++) { if (a[i].projectId !== pid) out.push(a[i]); }
+      DB.tasks.save(out);
+    }
+  },
+
+  ideas: {
+    all: function() { return DB._g('ideas'); },
+    save: function(a) { DB._s('ideas', a); },
+    add: function(i) {
+      var a = DB.ideas.all();
+      i.id = 'i_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      i.createdAt = new Date().toISOString();
+      i.promoted = false;
+      a.unshift(i);
+      DB.ideas.save(a);
+      return i;
+    },
+    upd: function(id, u) {
+      var a = DB.ideas.all(), i = -1;
+      for (var j = 0; j < a.length; j++) { if (a[j].id === id) { i = j; break; } }
+      if (i > -1) {
+        for (var k in u) { if (u.hasOwnProperty(k)) a[i][k] = u[k]; }
+        DB.ideas.save(a);
+        return a[i];
+      }
+      return null;
+    },
+    del: function(id) {
+      var a = DB.ideas.all(), out = [];
+      for (var i = 0; i < a.length; i++) { if (a[i].id !== id) out.push(a[i]); }
+      DB.ideas.save(out);
+    },
+    promote: function(id) {
+      var idea = null, all = DB.ideas.all();
+      for (var i = 0; i < all.length; i++) { if (all[i].id === id) { idea = all[i]; break; } }
+      if (idea) {
+        var p = DB.projects.add({
+          name: idea.title, url: idea.url || '', status: 'idea', priority: 'medium',
+          nextAction: idea.description || 'Define first steps', progress: 0,
+          estCompletion: '', notes: idea.description || ''
+        });
+        DB.ideas.upd(id, { promoted: true, promotedTo: p.id });
+        return p;
+      }
+      return null;
+    }
+  },
+
+  knowledge: {
+    all: function() { return DB._g('knowledge'); },
+    save: function(a) { DB._s('knowledge', a); },
+    add: function(k) {
+      var a = DB.knowledge.all();
+      k.id = 'k_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      k.createdAt = new Date().toISOString();
+      k.updatedAt = k.createdAt;
+      a.unshift(k);
+      DB.knowledge.save(a);
+      return k;
+    },
+    upd: function(id, u) {
+      var a = DB.knowledge.all(), i = -1;
+      for (var j = 0; j < a.length; j++) { if (a[j].id === id) { i = j; break; } }
+      if (i > -1) {
+        for (var k in u) { if (u.hasOwnProperty(k)) a[i][k] = u[k]; }
+        a[i].updatedAt = new Date().toISOString();
+        DB.knowledge.save(a);
+        return a[i];
+      }
+      return null;
+    },
+    del: function(id) {
+      var a = DB.knowledge.all(), out = [];
+      for (var i = 0; i < a.length; i++) { if (a[i].id !== id) out.push(a[i]); }
+      DB.knowledge.save(out);
+    },
+    get: function(id) {
+      var a = DB.knowledge.all();
+      for (var i = 0; i < a.length; i++) { if (a[i].id === id) return a[i]; }
+      return null;
+    }
+  },
+
+  milestones: {
+    all: function() { return DB._g('milestones'); },
+    save: function(a) { DB._s('milestones', a); },
+    byProj: function(pid) {
+      var all = DB.milestones.all(), out = [];
+      for (var i = 0; i < all.length; i++) { if (all[i].projectId === pid) out.push(all[i]); }
+      return out;
+    },
+    add: function(m) {
+      var a = DB.milestones.all();
+      m.id = 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      m.completed = false;
+      a.push(m);
+      DB.milestones.save(a);
+      return m;
+    },
+    upd: function(id, u) {
+      var a = DB.milestones.all(), i = -1;
+      for (var j = 0; j < a.length; j++) { if (a[j].id === id) { i = j; break; } }
+      if (i > -1) {
+        for (var k in u) { if (u.hasOwnProperty(k)) a[i][k] = u[k]; }
+        DB.milestones.save(a);
+        return a[i];
+      }
+      return null;
+    },
+    del: function(id) {
+      var a = DB.milestones.all(), out = [];
+      for (var i = 0; i < a.length; i++) { if (a[i].id !== id) out.push(a[i]); }
+      DB.milestones.save(out);
+    }
+  },
+
+  buildLogs: {
+    all: function() { return DB._g('buildLogs'); },
+    save: function(a) { DB._s('buildLogs', a); },
+    byProj: function(pid) {
+      var all = DB.buildLogs.all(), out = [];
+      for (var i = 0; i < all.length; i++) { if (all[i].projectId === pid) out.push(all[i]); }
+      out.sort(function(a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+      return out;
+    },
+    add: function(b) {
+      var a = DB.buildLogs.all();
+      b.id = 'b_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      b.timestamp = new Date().toISOString();
+      a.push(b);
+      DB.buildLogs.save(a);
+      return b;
+    },
+    del: function(id) {
+      var a = DB.buildLogs.all(), out = [];
+      for (var i = 0; i < a.length; i++) { if (a[i].id !== id) out.push(a[i]); }
+      DB.buildLogs.save(out);
+    }
+  },
+
+  journals: {
+    all: function() { return DB._g('journals'); },
+    save: function(a) { DB._s('journals', a); },
+    byProj: function(pid) {
+      var all = DB.journals.all(), out = [];
+      for (var i = 0; i < all.length; i++) { if (all[i].projectId === pid) out.push(all[i]); }
+      out.sort(function(a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+      return out;
+    },
+    add: function(j) {
+      var a = DB.journals.all();
+      j.id = 'j_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      j.timestamp = new Date().toISOString();
+      a.push(j);
+      DB.journals.save(a);
+      return j;
+    },
+    del: function(id) {
+      var a = DB.journals.all(), out = [];
+      for (var i = 0; i < a.length; i++) { if (a[i].id !== id) out.push(a[i]); }
+      DB.journals.save(out);
+    }
+  },
+
+  links: {
+    all: function() { return DB._g('links'); },
+    save: function(a) { DB._s('links', a); },
+    byProj: function(pid) {
+      var all = DB.links.all(), out = [];
+      for (var i = 0; i < all.length; i++) { if (all[i].projectId === pid) out.push(all[i]); }
+      return out;
+    },
+    add: function(l) {
+      var a = DB.links.all();
+      l.id = 'l_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      a.push(l);
+      DB.links.save(a);
+      return l;
+    },
+    del: function(id) {
+      var a = DB.links.all(), out = [];
+      for (var i = 0; i < a.length; i++) { if (a[i].id !== id) out.push(a[i]); }
+      DB.links.save(out);
+    }
+  },
+
+  act: {
+    all: function() { return DB._g('activity'); },
+    save: function(a) { DB._s('activity', a); },
+    add: function(type, msg, pid) {
+      var a = DB.act.all();
+      a.unshift({ id: 'a_' + Date.now(), type: type, message: msg, projectId: pid, timestamp: new Date().toISOString() });
+      if (a.length > 500) a.length = 500;
+      DB.act.save(a);
+    }
+  }
+};
+
+/* ============================================================
+   HARD-CODED STARTER IDEAS
+   ============================================================ */
+var STARTER_IDEAS = [
+  { title: 'CLI task runner', description: 'A minimal CLI tool that replaces Makefiles and npm scripts with a single config file. Supports dependency graphs between tasks, parallel execution, and cached outputs. Think Turborepo but for any project.' },
+  { title: 'Dotfiles manager', description: 'A lightweight dotfiles manager that uses symlinks and Git. Supports profiles for different machines (work laptop, home desktop, server) with shared and machine-specific configs.' },
+  { title: 'Markdown changelog generator', description: 'Parses Git commit history and conventional commit messages to auto-generate a clean CHANGELOG.md. Groups by feature/fix/breaking, links to PRs, and formats release dates.' },
+  { title: 'Local-first note taking app', description: 'A markdown note app that stores everything in IndexedDB. Works offline, syncs via Git to a remote repo. Supports backlinks, graph view, and tag-based filtering. No server needed.' },
+  { title: 'API mock server', description: 'A zero-config mock server that reads OpenAPI specs and generates realistic fake responses. Supports latency simulation, error scenarios, and stateful mocks for testing frontends before the backend exists.' },
+  { title: 'GitHub PR dashboard', description: 'A personal dashboard that aggregates all open PRs across your repos, shows review status, CI results, and age. Highlights PRs that are stuck waiting for review.' },
+  { title: 'Docker compose template library', description: 'A curated collection of production-ready docker-compose templates for common stacks: Postgres + Redis + pgAdmin, ELK stack, monitoring with Prometheus + Grafana. One command to spin up any stack.' },
+  { title: 'Personal reading list tracker', description: 'Track technical books, articles, and papers you want to read, are reading, or have finished. Add notes, ratings, and key takeaways. Export as markdown.' },
+  { title: 'SSH config manager', description: 'A TUI for managing SSH hosts, keys, and tunnels. Auto-generates ~/.ssh/config, tests connections, and provides one-command tunnel setup. Useful when juggling dozens of servers.' },
+  { title: 'Snippet search engine', description: 'Index all your code snippets, config files, and notes with full-text search. Tag snippets by language, project, or use case. Quick paste from a system tray menu or keyboard shortcut.' },
+  { title: 'Automated README generator', description: 'Analyzes a repo structure, package.json, and source code to generate a comprehensive README with installation steps, usage examples, API docs, and project badges. Updates automatically on push.' },
+  { title: 'Dev environment bootstrap script', description: 'A single script that sets up a complete dev environment on a fresh machine: installs tools, clones repos, sets up SSH keys, configures terminal, editor, and Git. Idempotent and cross-platform.' }
+];
+
+function ensureStarterIdeas() {
+  try {
+    var existing = DB.ideas.all();
+    var titles = {};
+    for (var i = 0; i < existing.length; i++) titles[existing[i].title] = true;
+    for (var j = 0; j < STARTER_IDEAS.length; j++) {
+      if (!titles[STARTER_IDEAS[j].title]) {
+        DB.ideas.add({ title: STARTER_IDEAS[j].title, description: STARTER_IDEAS[j].description, url: '' });
+      }
+    }
+  } catch (e) { console.warn('Starter ideas seed failed:', e.message); }
+}
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+var U = {
+  esc: function(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  },
+  ago: function(iso) {
+    if (!iso) return '—';
+    try {
+      var d = new Date(iso), n = Date.now(), df = n - d.getTime(), m = Math.floor(df / 6e4);
+      if (m < 1) return 'just now';
+      if (m < 60) return m + 'm ago';
+      var h = Math.floor(m / 60);
+      if (h < 24) return h + 'h ago';
+      var dy = Math.floor(h / 24);
+      if (dy < 7) return dy + 'd ago';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: d.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined });
+    } catch { return '—'; }
+  },
+  date: function(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+    catch { return '—'; }
+  },
+  days: function(iso) {
+    if (!iso) return 999;
+    try { return Math.floor((Date.now() - new Date(iso).getTime()) / 864e5); }
+    catch { return 999; }
+  },
+  overdue: function(ec) {
+    if (!ec) return false;
+    try { return new Date(ec) < new Date(); }
+    catch { return false; }
+  },
+  pVal: function(p) { return { critical: 0, high: 1, medium: 2, low: 3 }[p] !== undefined ? { critical: 0, high: 1, medium: 2, low: 3 }[p] : 4; },
+  sLbl: function(s) { return s ? s[0].toUpperCase() + s.slice(1) : '—'; },
+  pLbl: function(p) { return p ? p[0].toUpperCase() + p.slice(1) : '—'; },
+  sOrd: ['idea', 'building', 'testing', 'stuck', 'deployed', 'dead']
+};
+
+/* ============================================================
+   STATE
+   ============================================================ */
+var S = {
+  view: 'dashboard', projId: null, q: '', sFilter: 'all', pFilter: 'all',
+  sortBy: 'lastUpdated', sortDir: 'desc', selected: {}, selCount: 0,
+  sbOpen: true, wTab: 'tasks', qf: null
+};
+
+/* ============================================================
+   UI
+   ============================================================ */
+var UI = {
+  el: document.getElementById('view-container'),
+
+  render: function() {
+    var c = this.el;
+    switch (S.view) {
+      case 'dashboard': this.dash(c); break;
+      case 'project': this.proj(c); break;
+      case 'ideas': this.ideas(c); break;
+      case 'knowledge': this.know(c); break;
+      case 'activity': this.activity(c); break;
+      default: this.dash(c);
+    }
+    this.navCounts();
+    this.navActive();
+  },
+
+  navCounts: function() {
+    var ps = DB.projects.all(), ids = DB.ideas.all(), ks = DB.knowledge.all();
+    var unpromoted = 0;
+    for (var i = 0; i < ids.length; i++) { if (!ids[i].promoted) unpromoted++; }
+    var el;
+    el = document.getElementById('nCp'); if (el) el.textContent = ps.length;
+    el = document.getElementById('nCi'); if (el) el.textContent = unpromoted;
+    el = document.getElementById('nCk'); if (el) el.textContent = ks.length;
+    var stuck = 0, building = 0;
+    for (var j = 0; j < ps.length; j++) { if (ps[j].status === 'stuck') stuck++; if (ps[j].status === 'building') building++; }
+    el = document.getElementById('nCs'); if (el) el.textContent = stuck;
+    el = document.getElementById('nCb'); if (el) el.textContent = building;
+  },
+
+  navActive: function() {
+    var items = document.querySelectorAll('.nav-item');
+    for (var i = 0; i < items.length; i++) items[i].classList.remove('active');
+    var sel = S.view === 'project' ? '[data-view="dashboard"]' : '[data-view="' + S.view + '"]';
+    var el = document.querySelector(sel);
+    if (el) el.classList.add('active');
+  },
+
+  isSelected: function(id) { return S.selected[id] === true; },
+  toggleSelect: function(id) {
+    if (S.selected[id]) { delete S.selected[id]; S.selCount--; }
+    else { S.selected[id] = true; S.selCount++; }
+  },
+  clearSelected: function() { S.selected = {}; S.selCount = 0; },
+  getSelectedIds: function() {
+    var ids = [];
+    for (var k in S.selected) { if (S.selected[k]) ids.push(k); }
+    return ids;
+  },
+
+  dash: function(c) {
+    var ps = DB.projects.all();
+    var q = S.q.toLowerCase();
+    if (q) {
+      ps = ps.filter(function(p) {
+        return (p.name && p.name.toLowerCase().indexOf(q) > -1) ||
+          (p.url && p.url.toLowerCase().indexOf(q) > -1) ||
+          (p.nextAction && p.nextAction.toLowerCase().indexOf(q) > -1) ||
+          (p.notes && p.notes.toLowerCase().indexOf(q) > -1);
+      });
+    }
+    if (S.sFilter !== 'all') ps = ps.filter(function(p) { return p.status === S.sFilter; });
+    if (S.pFilter !== 'all') ps = ps.filter(function(p) { return p.priority === S.pFilter; });
+    if (S.qf === 'stuck') ps = ps.filter(function(p) { return p.status === 'stuck' || DB.tasks.byProj(p.id).some(function(t) { return t.status === 'blocked'; }); });
+    if (S.qf === 'building') ps = ps.filter(function(p) { return p.status === 'building'; });
+    if (S.qf === 'critical') ps = ps.filter(function(p) { return p.priority === 'critical'; });
+    if (S.qf === 'stale') ps = ps.filter(function(p) { return U.days(p.lastUpdated) >= 7 && p.status !== 'dead' && p.status !== 'deployed'; });
+
+    ps.sort(function(a, b) {
+      var va, vb;
+      switch (S.sortBy) {
+        case 'name': va = (a.name || '').toLowerCase(); vb = (b.name || '').toLowerCase(); return S.sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+        case 'priority': va = U.pVal(a.priority); vb = U.pVal(b.priority); break;
+        case 'progress': va = a.progress || 0; vb = b.progress || 0; break;
+        case 'status': va = U.sOrd.indexOf(a.status || 'idea'); vb = U.sOrd.indexOf(b.status || 'idea'); break;
+        default: va = new Date(a.lastUpdated || 0).getTime(); vb = new Date(b.lastUpdated || 0).getTime();
+      }
+      return S.sortDir === 'asc' ? va - vb : vb - va;
+    });
+
+    var all = DB.projects.all();
+    var active = 0, stuck = 0, blocked = 0, deployed = 0;
+    for (var i = 0; i < all.length; i++) {
+      var p = all[i];
+      if (p.status !== 'dead' && p.status !== 'deployed') active++;
+      if (p.status === 'stuck') stuck++;
+      if (p.status === 'deployed') deployed++;
+      var tasks = DB.tasks.byProj(p.id);
+      for (var j = 0; j < tasks.length; j++) { if (tasks[j].status === 'blocked') blocked++; }
+    }
+    var overdue = 0;
+    for (var ii = 0; ii < all.length; ii++) { if (U.overdue(all[ii].estCompletion) && all[ii].status !== 'dead' && all[ii].status !== 'deployed') overdue++; }
+
+    var h = '<div style="margin-bottom:24px">' +
+      '<div class="dash-title">Dashboard</div>' +
+      '<div class="dash-sub">' + all.length + ' projects · ' + active + ' active · ' + stuck + ' blocked</div>' +
+      '<div class="stats">' +
+      '<div class="stat"><div class="stat-val">' + active + '</div><div class="stat-lbl">Active</div></div>' +
+      '<div class="stat urg"><div class="stat-val">' + stuck + '</div><div class="stat-lbl">Blocked</div></div>' +
+      '<div class="stat"><div class="stat-val">' + overdue + '</div><div class="stat-lbl">Overdue</div></div>' +
+      '<div class="stat"><div class="stat-val">' + blocked + '</div><div class="stat-lbl">Blocked Tasks</div></div>' +
+      '<div class="stat"><div class="stat-val">' + deployed + '</div><div class="stat-lbl">Deployed</div></div>' +
+      '</div></div>';
+
+    h += '<div class="toolbar">' +
+      '<div class="tg">' +
+      '<button class="fbtn ' + (S.sFilter === 'all' ? 'on' : '') + '" data-sf="all">All</button>' +
+      '<button class="fbtn ' + (S.sFilter === 'idea' ? 'on' : '') + '" data-sf="idea">Idea</button>' +
+      '<button class="fbtn ' + (S.sFilter === 'building' ? 'on' : '') + '" data-sf="building">Building</button>' +
+      '<button class="fbtn ' + (S.sFilter === 'testing' ? 'on' : '') + '" data-sf="testing">Testing</button>' +
+      '<button class="fbtn ' + (S.sFilter === 'stuck' ? 'on' : '') + '" data-sf="stuck">Stuck</button>' +
+      '<button class="fbtn ' + (S.sFilter === 'deployed' ? 'on' : '') + '" data-sf="deployed">Deployed</button>' +
+      '<button class="fbtn ' + (S.sFilter === 'dead' ? 'on' : '') + '" data-sf="dead">Dead</button>' +
+      '</div><div class="ts"></div>' +
+      '<div class="tg"><select class="ssel" id="sortSel">' +
+      '<option value="lastUpdated"' + (S.sortBy === 'lastUpdated' ? ' selected' : '') + '>Last Updated</option>' +
+      '<option value="priority"' + (S.sortBy === 'priority' ? ' selected' : '') + '>Priority</option>' +
+      '<option value="name"' + (S.sortBy === 'name' ? ' selected' : '') + '>Name</option>' +
+      '<option value="progress"' + (S.sortBy === 'progress' ? ' selected' : '') + '>Progress</option>' +
+      '<option value="status"' + (S.sortBy === 'status' ? ' selected' : '') + '>Status</option>' +
+      '</select><button class="fbtn" id="sortDirBtn">' + (S.sortDir === 'desc' ? '↓' : '↑') + '</button></div>' +
+      '<div class="ts"></div>' +
+      '<select class="ssel" id="pfSel">' +
+      '<option value="all"' + (S.pFilter === 'all' ? ' selected' : '') + '>All Priorities</option>' +
+      '<option value="critical"' + (S.pFilter === 'critical' ? ' selected' : '') + '>Critical</option>' +
+      '<option value="high"' + (S.pFilter === 'high' ? ' selected' : '') + '>High</option>' +
+      '<option value="medium"' + (S.pFilter === 'medium' ? ' selected' : '') + '>Medium</option>' +
+      '<option value="low"' + (S.pFilter === 'low' ? ' selected' : '') + '>Low</option>' +
+      '</select>';
+
+    if (S.selCount > 0) {
+      h += '<div style="margin-left:auto"><div class="bulk-bar" style="margin:0"><span class="sel-cnt">' + S.selCount + ' selected</span><div class="ba">' +
+        '<button class="btn btn-sm btn-sec" data-bk="status">Status</button>' +
+        '<button class="btn btn-sm btn-sec" data-bk="priority">Priority</button>' +
+        '<button class="btn btn-sm btn-del" data-bk="delete">Delete</button>' +
+        '<button class="btn btn-sm btn-sec" data-bk="clear">Clear</button>' +
+        '</div></div></div>';
+    }
+    h += '</div>';
+
+    if (ps.length === 0) {
+      h += '<div class="empty"><div class="empty-icon">◈</div><div class="empty-t">' + (q ? 'No results' : 'No projects yet') + '</div><div class="empty-d">' + (q ? 'Try a different search' : 'Create a project or promote an idea to get started') + '</div></div>';
+    } else {
+      h += '<div class="pgrid">';
+      for (var pi = 0; pi < ps.length; pi++) {
+        var p = ps[pi];
+        var tasks = DB.tasks.byProj(p.id);
+        var at = 0, bt = 0;
+        for (var ti = 0; ti < tasks.length; ti++) {
+          if (tasks[ti].status === 'todo' || tasks[ti].status === 'in-progress') at++;
+          if (tasks[ti].status === 'blocked') bt++;
+        }
+        var urg = p.status === 'stuck' || bt > 0;
+        var od = U.overdue(p.estCompletion) && p.status !== 'dead' && p.status !== 'deployed';
+        var st = U.days(p.lastUpdated) >= 7 && p.status !== 'dead' && p.status !== 'deployed';
+        var cls = 'pcard';
+        if (urg) cls += ' urg'; else if (od) cls += ' odue'; else if (st) cls += ' stale';
+
+        h += '<div class="' + cls + '" data-pid="' + p.id + '">' +
+          '<div class="pcard-acts">' +
+          '<button class="ca-btn" data-a="sel" title="Select" aria-label="Select">' + (UI.isSelected(p.id) ? '☑' : '☐') + '</button>' +
+          '<button class="ca-btn" data-a="edit" title="Edit" aria-label="Edit">✎</button>' +
+          '<button class="ca-btn" data-a="del" title="Delete" aria-label="Delete">✕</button>' +
+          '</div>' +
+          '<div class="pcard-top"><div class="pcard-name">' + U.esc(p.name) + '</div><span class="pcard-status s-' + (p.status || 'idea') + '">' + U.sLbl(p.status) + '</span></div>' +
+          (p.url ? '<div class="pcard-url">' + U.esc(p.url) + '</div>' : '') +
+          '<div class="pcard-na"><div class="pcard-na-lbl">Next Action</div><div class="pcard-na-txt">' + (U.esc(p.nextAction) || '<span style="color:var(--text-faint)">No next action defined</span>') + '</div></div>' +
+          '<div class="pcard-meta"><span>Updated ' + U.ago(p.lastUpdated) + '</span><span>' + U.pLbl(p.priority) + ' priority</span>' +
+          (p.estCompletion ? '<span style="' + (od ? 'color:var(--red)' : '') + '">Due ' + U.date(p.estCompletion) + '</span>' : '') + '</div>' +
+          '<div class="pcard-prog"><div class="pbar"><div class="pfill" style="width:' + (p.progress || 0) + '%"></div></div><div class="pcard-prog-lbl"><span>' + (p.progress || 0) + '% complete</span></div></div>' +
+          '<div class="pcard-tasks"><span>' + at + ' active</span>' + (bt > 0 ? '<span class="bl">' + bt + ' blocked</span>' : '') + '</div>' +
+          (p.notes ? '<div class="pcard-notes">' + U.esc(p.notes) + '</div>' : '') +
+          '</div>';
+      }
+      h += '</div>';
+    }
+    c.innerHTML = h;
+    this.bindDash();
+  },
+
+  bindDash: function() {
+    var self = this;
+    var cards = this.el.querySelectorAll('.pcard');
+    for (var i = 0; i < cards.length; i++) {
+      cards[i].addEventListener('click', function(e) {
+        if (e.target.closest('.ca-btn')) return;
+        S.view = 'project'; S.projId = this.dataset.pid; S.wTab = 'tasks'; self.render();
+      });
+    }
+    var editBtns = this.el.querySelectorAll('[data-a="edit"]');
+    for (var j = 0; j < editBtns.length; j++) {
+      editBtns[j].addEventListener('click', function(e) { e.stopPropagation(); M.editProj(this.closest('.pcard').dataset.pid); });
+    }
+    var delBtns = this.el.querySelectorAll('[data-a="del"]');
+    for (var k = 0; k < delBtns.length; k++) {
+      delBtns[k].addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = this.closest('.pcard').dataset.pid;
+        if (confirm('Delete this project and all its data?')) { DB.projects.del(id); self.render(); T.show('Project deleted'); }
+      });
+    }
+    var selBtns = this.el.querySelectorAll('[data-a="sel"]');
+    for (var l = 0; l < selBtns.length; l++) {
+      selBtns[l].addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = this.closest('.pcard').dataset.pid;
+        UI.toggleSelect(id);
+        this.textContent = UI.isSelected(id) ? '☑' : '☐';
+        self.render();
+      });
+    }
+    var sfBtns = this.el.querySelectorAll('[data-sf]');
+    for (var m = 0; m < sfBtns.length; m++) {
+      sfBtns[m].addEventListener('click', function() { S.sFilter = this.dataset.sf; S.qf = null; self.render(); });
+    }
+    var sortSel = document.getElementById('sortSel');
+    if (sortSel) sortSel.addEventListener('change', function() { S.sortBy = this.value; self.render(); });
+    var sortDir = document.getElementById('sortDirBtn');
+    if (sortDir) sortDir.addEventListener('click', function() { S.sortDir = S.sortDir === 'desc' ? 'asc' : 'desc'; self.render(); });
+    var pfSel = document.getElementById('pfSel');
+    if (pfSel) pfSel.addEventListener('change', function() { S.pFilter = this.value; self.render(); });
+    var bkBtns = this.el.querySelectorAll('[data-bk]');
+    for (var n = 0; n < bkBtns.length; n++) {
+      bkBtns[n].addEventListener('click', function() {
+        var a = this.dataset.bk, ids = UI.getSelectedIds();
+        if (a === 'clear') { UI.clearSelected(); self.render(); return; }
+        if (a === 'delete') { if (confirm('Delete ' + ids.length + ' projects?')) { for (var x = 0; x < ids.length; x++) DB.projects.del(ids[x]); UI.clearSelected(); self.render(); T.show(ids.length + ' deleted'); } return; }
+        if (a === 'status') { M.bulkStatus(ids); return; }
+        if (a === 'priority') { M.bulkPriority(ids); return; }
+      });
+    }
+  },
+
+  proj: function(c) {
+    var p = DB.projects.get(S.projId);
+    if (!p) { S.view = 'dashboard'; this.render(); return; }
+    var tasks = DB.tasks.byProj(p.id);
+    var ms = DB.milestones.byProj(p.id);
+    var bl = DB.buildLogs.byProj(p.id);
+    var jr = DB.journals.byProj(p.id);
+    var lk = DB.links.byProj(p.id);
+    var self = this;
+
+    var h = '<div class="ws"><div class="ws-main">' +
+      '<button class="ws-back" id="wsBack">← Dashboard</button>' +
+      '<div class="ws-header"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">' +
+      '<div><div class="ws-title">' + U.esc(p.name) + '</div>' +
+      (p.url ? '<div class="ws-url"><a href="' + U.esc(p.url) + '" target="_blank" rel="noopener noreferrer">' + U.esc(p.url) + '</a></div>' : '') +
+      '</div><button class="btn btn-sm btn-sec" id="wsEdit">Edit</button></div></div>' +
+      '<div class="ws-bar">' +
+      '<span class="pcard-status s-' + (p.status || 'idea') + '">' + U.sLbl(p.status) + '</span>' +
+      '<span>' + U.pLbl(p.priority) + ' priority</span>' +
+      '<span>' + (p.progress || 0) + '% complete</span>' +
+      '<span>Updated ' + U.ago(p.lastUpdated) + '</span>' +
+      (p.estCompletion ? '<span style="' + (U.overdue(p.estCompletion) ? 'color:var(--red)' : '') + '">Due ' + U.date(p.estCompletion) + '</span>' : '') +
+      '</div>' +
+      '<div class="ws-na"><div class="ws-na-lbl">Next Action</div><div class="ws-na-txt" contenteditable="true" data-f="na">' + U.esc(p.nextAction || '') + '</div></div>' +
+      '<div style="margin-bottom:20px"><div class="ws-field-lbl">Notes</div><textarea class="ws-notes" data-f="notes" placeholder="Project notes...">' + U.esc(p.notes || '') + '</textarea></div>' +
+      '<div class="ws-tabs">' +
+      '<button class="ws-tab ' + (S.wTab === 'tasks' ? 'on' : '') + '" data-wt="tasks">Tasks (' + tasks.length + ')</button>' +
+      '<button class="ws-tab ' + (S.wTab === 'milestones' ? 'on' : '') + '" data-wt="milestones">Milestones (' + ms.length + ')</button>' +
+      '<button class="ws-tab ' + (S.wTab === 'buildlog' ? 'on' : '') + '" data-wt="buildlog">Build Log</button>' +
+      '<button class="ws-tab ' + (S.wTab === 'journal' ? 'on' : '') + '" data-wt="journal">Journal</button>' +
+      '<button class="ws-tab ' + (S.wTab === 'links' ? 'on' : '') + '" data-wt="links">Links</button>' +
+      '</div><div>';
+
+    if (S.wTab === 'tasks') {
+      h += '<div class="tboard">' +
+        self.tCol('Todo', tasks.filter(function(t) { return t.status === 'todo'; }), 'todo', p.id) +
+        self.tCol('In Progress', tasks.filter(function(t) { return t.status === 'in-progress'; }), 'in-progress', p.id) +
+        self.tCol('Blocked', tasks.filter(function(t) { return t.status === 'blocked'; }), 'blocked', p.id) +
+        self.tCol('Done', tasks.filter(function(t) { return t.status === 'done'; }), 'done', p.id) +
+        '</div>';
+    } else if (S.wTab === 'milestones') {
+      h += '<div style="margin-bottom:12px"><button class="btn btn-sm btn-sec" id="addMs">+ Milestone</button></div>';
+      if (!ms.length) h += '<div class="empty" style="padding:30px"><div class="empty-d">No milestones yet</div></div>';
+      else {
+        ms.sort(function(a, b) { if (a.completed !== b.completed) return a.completed ? 1 : -1; return 0; });
+        for (var mi = 0; mi < ms.length; mi++) {
+          var m = ms[mi];
+          h += '<div class="ms-item"><div class="ms-check ' + (m.completed ? 'done' : '') + '" data-mid="' + m.id + '"></div><span class="ms-title ' + (m.completed ? 'done' : '') + '">' + U.esc(m.title) + '</span>' + (m.dueDate ? '<span class="ms-due">' + U.date(m.dueDate) + '</span>' : '') + '<button class="tm-btn" data-mdel="' + m.id + '">✕</button></div>';
+        }
+      }
+    } else if (S.wTab === 'buildlog') {
+      h += '<div style="margin-bottom:12px"><button class="btn btn-sm btn-sec" id="addBl">+ Entry</button></div>';
+      if (!bl.length) h += '<div class="empty" style="padding:30px"><div class="empty-d">No build log entries</div></div>';
+      else {
+        for (var bi = 0; bi < bl.length; bi++) {
+          h += '<div class="log-e"><div class="log-t">' + U.ago(bl[bi].timestamp) + (bl[bi].type ? ' · ' + U.esc(bl[bi].type) : '') + '</div><div class="log-c">' + U.esc(bl[bi].content) + '</div><button class="tm-btn" style="float:right;margin-top:-18px" data-bdel="' + bl[bi].id + '">✕</button></div>';
+        }
+      }
+    } else if (S.wTab === 'journal') {
+      h += '<div style="margin-bottom:12px"><button class="btn btn-sm btn-sec" id="addJr">+ Entry</button></div>';
+      if (!jr.length) h += '<div class="empty" style="padding:30px"><div class="empty-d">No journal entries</div></div>';
+      else {
+        for (var ji = 0; ji < jr.length; ji++) {
+          h += '<div class="log-e"><div class="log-t">' + U.ago(jr[ji].timestamp) + '</div><div class="log-c" style="white-space:pre-wrap">' + U.esc(jr[ji].content) + '</div><button class="tm-btn" style="float:right;margin-top:-18px" data-jdel="' + jr[ji].id + '">✕</button></div>';
+        }
+      }
+    } else if (S.wTab === 'links') {
+      h += '<div style="margin-bottom:12px"><button class="btn btn-sm btn-sec" id="addLk">+ Link</button></div>';
+      if (!lk.length) h += '<div class="empty" style="padding:30px"><div class="empty-d">No links saved</div></div>';
+      else {
+        for (var li = 0; li < lk.length; li++) {
+          var l = lk[li];
+          h += '<div class="log-e" style="display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-size:13px;font-weight:600">' + U.esc(l.title || l.url) + '</div><div style="font-size:12px;color:var(--text-muted)"><a href="' + U.esc(l.url) + '" target="_blank" rel="noopener noreferrer">' + U.esc(l.url) + '</a></div>' + (l.description ? '<div style="font-size:12px;color:var(--text-dim);margin-top:2px">' + U.esc(l.description) + '</div>' : '') + '</div><button class="tm-btn" data-ldel="' + l.id + '">✕</button></div>';
+        }
+      }
+    }
+
+    h += '</div></div></div>';
+    c.innerHTML = h;
+    this.bindProj(p);
+  },
+
+  tCol: function(title, tasks, status, pid) {
+    var h = '<div class="tcol"><div class="tcol-hd"><span>' + title + '</span><span class="tcol-cnt">' + tasks.length + '</span></div><div class="tcol-bd" data-st="' + status + '">';
+    for (var i = 0; i < tasks.length; i++) {
+      var t = tasks[i];
+      h += '<div class="titem" draggable="true" data-tid="' + t.id + '"><div class="titem-acts"><button class="tm-btn" data-te="' + t.id + '" aria-label="Edit">✎</button><button class="tm-btn" data-td="' + t.id + '" aria-label="Delete">✕</button></div><div class="titem-title">' + U.esc(t.title) + '</div><div class="titem-meta">' + U.ago(t.updatedAt) + '</div></div>';
+    }
+    h += '<button class="tadd" data-at="' + status + '">+ Add task</button></div></div>';
+    return h;
+  },
+
+  bindProj: function(p) {
+    var self = this;
+    var backBtn = document.getElementById('wsBack');
+    if (backBtn) backBtn.addEventListener('click', function() { S.view = 'dashboard'; S.projId = null; self.render(); });
+    var editBtn = document.getElementById('wsEdit');
+    if (editBtn) editBtn.addEventListener('click', function() { M.editProj(p.id); });
+
+    var tabs = this.el.querySelectorAll('.ws-tab');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].addEventListener('click', function() { S.wTab = this.dataset.wt; self.render(); });
+    }
+
+    var na = this.el.querySelector('[data-f="na"]');
+    if (na) {
+      na.addEventListener('blur', function() {
+        var v = na.textContent.trim();
+        if (v !== (p.nextAction || '')) { DB.projects.upd(p.id, { nextAction: v }); T.show('Updated'); }
+      });
+    }
+    var nt = this.el.querySelector('[data-f="notes"]');
+    if (nt) {
+      var saveTo;
+      nt.addEventListener('input', function() { clearTimeout(saveTo); saveTo = setTimeout(function() { DB.projects.upd(p.id, { notes: nt.value }); }, 600); });
+    }
+
+    var addTaskBtns = this.el.querySelectorAll('[data-at]');
+    for (var j = 0; j < addTaskBtns.length; j++) {
+      addTaskBtns[j].addEventListener('click', function() { M.addTask(p.id, this.dataset.at); });
+    }
+    var teBtns = this.el.querySelectorAll('[data-te]');
+    for (var k = 0; k < teBtns.length; k++) {
+      teBtns[k].addEventListener('click', function(e) { e.stopPropagation(); M.editTask(this.dataset.te); });
+    }
+    var tdBtns = this.el.querySelectorAll('[data-td]');
+    for (var l = 0; l < tdBtns.length; l++) {
+      tdBtns[l].addEventListener('click', function(e) { e.stopPropagation(); DB.tasks.del(this.dataset.td); self.render(); T.show('Task deleted'); });
+    }
+    var msChecks = this.el.querySelectorAll('[data-mid]');
+    for (var m = 0; m < msChecks.length; m++) {
+      msChecks[m].addEventListener('click', function() {
+        var mid = this.dataset.mid;
+        var all = DB.milestones.all();
+        for (var x = 0; x < all.length; x++) { if (all[x].id === mid) { DB.milestones.upd(mid, { completed: !all[x].completed }); break; } }
+        self.render();
+      });
+    }
+    var mdelBtns = this.el.querySelectorAll('[data-mdel]');
+    for (var n = 0; n < mdelBtns.length; n++) { mdelBtns[n].addEventListener('click', function(e) { e.stopPropagation(); DB.milestones.del(this.dataset.mdel); self.render(); }); }
+    var bdelBtns = this.el.querySelectorAll('[data-bdel]');
+    for (var o = 0; o < bdelBtns.length; o++) { bdelBtns[o].addEventListener('click', function(e) { e.stopPropagation(); DB.buildLogs.del(this.dataset.bdel); self.render(); }); }
+    var jdelBtns = this.el.querySelectorAll('[data-jdel]');
+    for (var pp = 0; pp < jdelBtns.length; pp++) { jdelBtns[pp].addEventListener('click', function(e) { e.stopPropagation(); DB.journals.del(this.dataset.jdel); self.render(); }); }
+    var ldelBtns = this.el.querySelectorAll('[data-ldel]');
+    for (var q = 0; q < ldelBtns.length; q++) { ldelBtns[q].addEventListener('click', function(e) { e.stopPropagation(); DB.links.del(this.dataset.ldel); self.render(); }); }
+
+    var addMsBtn = document.getElementById('addMs'); if (addMsBtn) addMsBtn.addEventListener('click', function() { M.addMs(p.id); });
+    var addBlBtn = document.getElementById('addBl'); if (addBlBtn) addBlBtn.addEventListener('click', function() { M.addBl(p.id); });
+    var addJrBtn = document.getElementById('addJr'); if (addJrBtn) addJrBtn.addEventListener('click', function() { M.addJr(p.id); });
+    var addLkBtn = document.getElementById('addLk'); if (addLkBtn) addLkBtn.addEventListener('click', function() { M.addLk(p.id); });
+
+    this.dragDrop(p.id);
+  },
+
+  dragDrop: function(pid) {
+    var items = this.el.querySelectorAll('.titem[draggable]');
+    var cols = this.el.querySelectorAll('.tcol-bd');
+    var self = this;
+    for (var i = 0; i < items.length; i++) {
+      items[i].addEventListener('dragstart', function(e) { e.dataTransfer.setData('text/plain', this.dataset.tid); this.classList.add('drag'); });
+      items[i].addEventListener('dragend', function() { this.classList.remove('drag'); });
+    }
+    for (var j = 0; j < cols.length; j++) {
+      cols[j].addEventListener('dragover', function(e) { e.preventDefault(); this.style.background = 'var(--bg-hover)'; });
+      cols[j].addEventListener('dragleave', function() { this.style.background = ''; });
+      cols[j].addEventListener('drop', function(e) {
+        e.preventDefault(); this.style.background = '';
+        var tid = e.dataTransfer.getData('text/plain'), ns = this.dataset.st;
+        if (tid && ns) { DB.tasks.upd(tid, { status: ns }); self.render(); T.show('Task moved'); }
+      });
+    }
+  },
+
+  ideas: function(c) {
+    var ids = DB.ideas.all(), unpromoted = [];
+    for (var i = 0; i < ids.length; i++) { if (!ids[i].promoted) unpromoted.push(ids[i]); }
+    var q = S.q.toLowerCase();
+    var f = q ? unpromoted.filter(function(i) { return (i.title || '').toLowerCase().indexOf(q) > -1 || (i.description || '').toLowerCase().indexOf(q) > -1; }) : unpromoted;
+    var self = this;
+
+    var h = '<div style="margin-bottom:24px"><div class="dash-title">Ideas</div><div class="dash-sub">' + unpromoted.length + ' unpromoted ideas</div></div>' +
+      '<div class="toolbar"><button class="h-btn pri" id="addIdeaBtn">+ New Idea</button></div>';
+    if (!f.length) h += '<div class="empty"><div class="empty-icon">◇</div><div class="empty-t">' + (q ? 'No matches' : 'No ideas yet') + '</div><div class="empty-d">Capture concepts before they become projects</div></div>';
+    else {
+      h += '<div class="igrid">';
+      for (var j = 0; j < f.length; j++) {
+        var idea = f[j];
+        h += '<div class="icard"><div class="icard-t">' + U.esc(idea.title) + '</div><div class="icard-d">' + U.esc(idea.description || '') + '</div><div class="icard-m"><span>' + U.ago(idea.createdAt) + '</span><div class="icard-a"><button class="btn btn-sm btn-sec" data-iedit="' + idea.id + '">✎</button><button class="promo" data-ipromo="' + idea.id + '">Promote →</button><button class="btn btn-sm btn-del" data-idel="' + idea.id + '">✕</button></div></div></div>';
+      }
+      h += '</div>';
+    }
+    c.innerHTML = h;
+
+    var addBtn = document.getElementById('addIdeaBtn'); if (addBtn) addBtn.addEventListener('click', function() { M.addIdea(); });
+    var ieditBtns = this.el.querySelectorAll('[data-iedit]');
+    for (var k = 0; k < ieditBtns.length; k++) { ieditBtns[k].addEventListener('click', function(e) { e.stopPropagation(); M.editIdea(this.dataset.iedit); }); }
+    var ipromoBtns = this.el.querySelectorAll('[data-ipromo]');
+    for (var l = 0; l < ipromoBtns.length; l++) { ipromoBtns[l].addEventListener('click', function(e) { e.stopPropagation(); var p = DB.ideas.promote(this.dataset.ipromo); if (p) { T.show('"' + p.name + '" promoted'); self.render(); } }); }
+    var idelBtns = this.el.querySelectorAll('[data-idel]');
+    for (var m = 0; m < idelBtns.length; m++) { idelBtns[m].addEventListener('click', function(e) { e.stopPropagation(); if (confirm('Delete this idea?')) { DB.ideas.del(this.dataset.idel); self.render(); T.show('Deleted'); } }); }
+  },
+
+  know: function(c) {
+    var ks = DB.knowledge.all();
+    var q = S.q.toLowerCase();
+    var f = q ? ks.filter(function(k) { return (k.title || '').toLowerCase().indexOf(q) > -1 || (k.content || '').toLowerCase().indexOf(q) > -1 || (k.tags || []).some(function(t) { return t.toLowerCase().indexOf(q) > -1; }); }) : ks;
+    var self = this;
+
+    var h = '<div style="margin-bottom:24px"><div class="dash-title">Knowledge</div><div class="dash-sub">' + ks.length + ' entries</div></div>' +
+      '<div class="toolbar"><button class="h-btn pri" id="addKnowBtn">+ New Entry</button></div>';
+    if (!f.length) h += '<div class="empty"><div class="empty-icon">▣</div><div class="empty-t">' + (q ? 'No matches' : 'No entries yet') + '</div><div class="empty-d">Store snippets, notes, and lessons learned</div></div>';
+    else {
+      h += '<div class="kgrid">';
+      for (var i = 0; i < f.length; i++) {
+        var k = f[i];
+        var tags = '';
+        if (k.tags && k.tags.length) { for (var t = 0; t < k.tags.length; t++) tags += '<span class="ktag">' + U.esc(k.tags[t]) + '</span>'; }
+        h += '<div class="kcard" data-kid="' + k.id + '"><div class="kcard-t">' + U.esc(k.title) + '</div>' + (tags ? '<div class="kcard-tags">' + tags + '</div>' : '') + '<div class="kcard-p">' + U.esc(k.content || '') + '</div><div class="kcard-m">' + U.ago(k.updatedAt || k.createdAt) + '</div></div>';
+      }
+      h += '</div>';
+    }
+    c.innerHTML = h;
+
+    var addBtn = document.getElementById('addKnowBtn'); if (addBtn) addBtn.addEventListener('click', function() { M.addKnow(); });
+    var kcards = this.el.querySelectorAll('.kcard');
+    for (var j = 0; j < kcards.length; j++) { kcards[j].addEventListener('click', function() { M.viewKnow(this.dataset.kid); }); }
+  },
+
+  activity: function(c) {
+    var as = DB.act.all();
+    var h = '<div style="margin-bottom:24px"><div class="dash-title">Activity</div><div class="dash-sub">' + as.length + ' events</div></div>';
+    if (!as.length) h += '<div class="empty"><div class="empty-icon">◷</div><div class="empty-t">No activity yet</div></div>';
+    else {
+      h += '<div class="act-list">';
+      var limit = as.length > 200 ? 200 : as.length;
+      for (var i = 0; i < limit; i++) {
+        var a = as[i];
+        var dc = a.type === 'created' ? 'var(--green)' : a.type === 'deleted' ? 'var(--red)' : 'var(--text-muted)';
+        h += '<div class="act-item"><div class="act-dot" style="background:' + dc + '"></div><div class="act-text">' + U.esc(a.message) + '</div><div class="act-time">' + U.ago(a.timestamp) + '</div></div>';
+      }
+      h += '</div>';
+    }
+    c.innerHTML = h;
+  }
+};
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+var M = {
+  ov: document.getElementById('mOverlay'),
+  tEl: document.getElementById('mTitle'),
+  bEl: document.getElementById('mBody'),
+  fEl: document.getElementById('mFoot'),
+
+  open: function(title, body, foot) { this.tEl.textContent = title; this.bEl.innerHTML = body; this.fEl.innerHTML = foot || ''; this.ov.classList.add('open'); },
+  close: function() { this.ov.classList.remove('open'); },
+
+  addProj: function() {
+    var self = this;
+    var b = '<div class="fg"><label class="fl">Project Name</label><input class="fi" id="xName" placeholder="my-awesome-project" autofocus></div>' +
+      '<div class="fg"><label class="fl">GitHub URL</label><input class="fi" id="xUrl" placeholder="https://github.com/user/repo"></div>' +
+      '<div class="frow"><div class="fg"><label class="fl">Status</label><select class="fi" id="xSt"><option value="idea">Idea</option><option value="building">Building</option><option value="testing">Testing</option><option value="stuck">Stuck</option><option value="deployed">Deployed</option><option value="dead">Dead</option></select></div>' +
+      '<div class="fg"><label class="fl">Priority</label><select class="fi" id="xPr"><option value="medium">Medium</option><option value="critical">Critical</option><option value="high">High</option><option value="low">Low</option></select></div></div>' +
+      '<div class="fg"><label class="fl">Next Action</label><input class="fi" id="xNa" placeholder="What is the very next step?"></div>' +
+      '<div class="frow"><div class="fg"><label class="fl">Progress %</label><input class="fi" id="xPg" type="number" min="0" max="100" value="0"></div>' +
+      '<div class="fg"><label class="fl">Est. Completion</label><input class="fi" id="xEc" type="date"></div></div>' +
+      '<div class="fg"><label class="fl">Notes</label><textarea class="fi" id="xNt" placeholder="Project notes..."></textarea></div>';
+    this.open('New Project', b, '<button class="btn btn-sec" id="mCancel0">Cancel</button><button class="btn btn-pri" id="xSave">Create</button>');
+    document.getElementById('xName').focus();
+    document.getElementById('xSave').addEventListener('click', function() {
+      var name = document.getElementById('xName').value.trim();
+      if (!name) { T.show('Name required', 'err'); return; }
+      DB.projects.add({ name: name, url: document.getElementById('xUrl').value.trim(), status: document.getElementById('xSt').value, priority: document.getElementById('xPr').value, nextAction: document.getElementById('xNa').value.trim(), progress: parseInt(document.getElementById('xPg').value) || 0, estCompletion: document.getElementById('xEc').value, notes: document.getElementById('xNt').value.trim() });
+      self.close(); UI.render(); T.show('Project created');
+    });
+    document.getElementById('mCancel0').addEventListener('click', function() { self.close(); });
+  },
+
+  editProj: function(id) {
+    var p = DB.projects.get(id); if (!p) return;
+    var self = this;
+    var statusOpts = ['idea', 'building', 'testing', 'stuck', 'deployed', 'dead'].map(function(s) { return '<option value="' + s + '"' + (p.status === s ? ' selected' : '') + '>' + U.sLbl(s) + '</option>'; }).join('');
+    var prioOpts = ['critical', 'high', 'medium', 'low'].map(function(r) { return '<option value="' + r + '"' + (p.priority === r ? ' selected' : '') + '>' + U.pLbl(r) + '</option>'; }).join('');
+    var b = '<div class="fg"><label class="fl">Project Name</label><input class="fi" id="xName" value="' + U.esc(p.name) + '" autofocus></div>' +
+      '<div class="fg"><label class="fl">GitHub URL</label><input class="fi" id="xUrl" value="' + U.esc(p.url || '') + '"></div>' +
+      '<div class="frow"><div class="fg"><label class="fl">Status</label><select class="fi" id="xSt">' + statusOpts + '</select></div>' +
+      '<div class="fg"><label class="fl">Priority</label><select class="fi" id="xPr">' + prioOpts + '</select></div></div>' +
+      '<div class="fg"><label class="fl">Next Action</label><input class="fi" id="xNa" value="' + U.esc(p.nextAction || '') + '"></div>' +
+      '<div class="frow"><div class="fg"><label class="fl">Progress %</label><input class="fi" id="xPg" type="number" min="0" max="100" value="' + (p.progress || 0) + '"></div>' +
+      '<div class="fg"><label class="fl">Est. Completion</label><input class="fi" id="xEc" type="date" value="' + (p.estCompletion || '') + '"></div></div>' +
+      '<div class="fg"><label class="fl">Notes</label><textarea class="fi" id="xNt">' + U.esc(p.notes || '') + '</textarea></div>';
+    this.open('Edit Project', b, '<button class="btn btn-del" id="mDel">Delete</button><button class="btn btn-sec" id="mCancel1">Cancel</button><button class="btn btn-pri" id="xSave">Save</button>');
+    document.getElementById('xSave').addEventListener('click', function() {
+      var name = document.getElementById('xName').value.trim();
+      if (!name) { T.show('Name required', 'err'); return; }
+      DB.projects.upd(id, { name: name, url: document.getElementById('xUrl').value.trim(), status: document.getElementById('xSt').value, priority: document.getElementById('xPr').value, nextAction: document.getElementById('xNa').value.trim(), progress: parseInt(document.getElementById('xPg').value) || 0, estCompletion: document.getElementById('xEc').value, notes: document.getElementById('xNt').value.trim() });
+      self.close(); UI.render(); T.show('Updated');
+    });
+    document.getElementById('mDel').addEventListener('click', function() { if (confirm('Delete?')) { DB.projects.del(id); self.close(); UI.render(); T.show('Deleted'); } });
+    document.getElementById('mCancel1').addEventListener('click', function() { self.close(); });
+  },
+
+  addTask: function(pid, status) {
+    status = status || 'todo';
+    var self = this;
+    var b = '<div class="fg"><label class="fl">Task Title</label><input class="fi" id="yTitle" placeholder="What needs to be done?" autofocus></div>' +
+      '<div class="fg"><label class="fl">Status</label><select class="fi" id="ySt"><option value="todo"' + (status === 'todo' ? ' selected' : '') + '>Todo</option><option value="in-progress"' + (status === 'in-progress' ? ' selected' : '') + '>In Progress</option><option value="blocked"' + (status === 'blocked' ? ' selected' : '') + '>Blocked</option><option value="done"' + (status === 'done' ? ' selected' : '') + '>Done</option></select></div>';
+    this.open('New Task', b, '<button class="btn btn-sec" id="mCancel2">Cancel</button><button class="btn btn-pri" id="ySave">Add</button>');
+    document.getElementById('yTitle').focus();
+    document.getElementById('ySave').addEventListener('click', function() {
+      var title = document.getElementById('yTitle').value.trim();
+      if (!title) { T.show('Title required', 'err'); return; }
+      DB.tasks.add({ projectId: pid, title: title, status: document.getElementById('ySt').value });
+      self.close(); UI.render(); T.show('Task added');
+    });
+    document.getElementById('mCancel2').addEventListener('click', function() { self.close(); });
+  },
+
+  editTask: function(tid) {
+    var t = null, all = DB.tasks.all();
+    for (var i = 0; i < all.length; i++) { if (all[i].id === tid) { t = all[i]; break; } }
+    if (!t) return;
+    var self = this;
+    var opts = ['todo', 'in-progress', 'blocked', 'done'].map(function(s) { return '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + U.sLbl(s) + '</option>'; }).join('');
+    var b = '<div class="fg"><label class="fl">Task Title</label><input class="fi" id="yTitle" value="' + U.esc(t.title) + '" autofocus></div><div class="fg"><label class="fl">Status</label><select class="fi" id="ySt">' + opts + '</select></div>';
+    this.open('Edit Task', b, '<button class="btn btn-del" id="mDelT">Delete</button><button class="btn btn-sec" id="mCancel3">Cancel</button><button class="btn btn-pri" id="ySave">Save</button>');
+    document.getElementById('ySave').addEventListener('click', function() {
+      DB.tasks.upd(tid, { title: document.getElementById('yTitle').value.trim(), status: document.getElementById('ySt').value });
+      self.close(); UI.render(); T.show('Updated');
+    });
+    document.getElementById('mDelT').addEventListener('click', function() { DB.tasks.del(tid); self.close(); UI.render(); T.show('Deleted'); });
+    document.getElementById('mCancel3').addEventListener('click', function() { self.close(); });
+  },
+
+  addIdea: function() {
+    var self = this;
+    var b = '<div class="fg"><label class="fl">Title</label><input class="fi" id="zTitle" placeholder="Brief title" autofocus></div><div class="fg"><label class="fl">Description</label><textarea class="fi" id="zDesc" placeholder="Describe the concept..."></textarea></div><div class="fg"><label class="fl">URL (optional)</label><input class="fi" id="zUrl" placeholder="https://..."></div>';
+    this.open('New Idea', b, '<button class="btn btn-sec" id="mCancel4">Cancel</button><button class="btn btn-pri" id="zSave">Save</button>');
+    document.getElementById('zTitle').focus();
+    document.getElementById('zSave').addEventListener('click', function() {
+      var title = document.getElementById('zTitle').value.trim();
+      if (!title) { T.show('Title required', 'err'); return; }
+      DB.ideas.add({ title: title, description: document.getElementById('zDesc').value.trim(), url: document.getElementById('zUrl').value.trim() });
+      self.close(); UI.render(); T.show('Idea saved');
+    });
+    document.getElementById('mCancel4').addEventListener('click', function() { self.close(); });
+  },
+
+  editIdea: function(id) {
+    var idea = null, all = DB.ideas.all();
+    for (var i = 0; i < all.length; i++) { if (all[i].id === id) { idea = all[i]; break; } }
+    if (!idea) return;
+    var self = this;
+    var b = '<div class="fg"><label class="fl">Title</label><input class="fi" id="zTitle" value="' + U.esc(idea.title) + '" autofocus></div><div class="fg"><label class="fl">Description</label><textarea class="fi" id="zDesc">' + U.esc(idea.description || '') + '</textarea></div><div class="fg"><label class="fl">URL</label><input class="fi" id="zUrl" value="' + U.esc(idea.url || '') + '"></div>';
+    this.open('Edit Idea', b, '<button class="btn btn-sec" id="mCancel5">Cancel</button><button class="btn btn-pri" id="zSave">Save</button>');
+    document.getElementById('zSave').addEventListener('click', function() {
+      DB.ideas.upd(id, { title: document.getElementById('zTitle').value.trim(), description: document.getElementById('zDesc').value.trim(), url: document.getElementById('zUrl').value.trim() });
+      self.close(); UI.render(); T.show('Updated');
+    });
+    document.getElementById('mCancel5').addEventListener('click', function() { self.close(); });
+  },
+
+  addKnow: function() {
+    var self = this;
+    var b = '<div class="fg"><label class="fl">Title</label><input class="fi" id="kTitle" placeholder="Snippet / note / decision" autofocus></div><div class="fg"><label class="fl">Tags (comma-separated)</label><input class="fi" id="kTags" placeholder="docker, deployment, nginx"></div><div class="fg"><label class="fl">Content</label><textarea class="fi" id="kContent" style="min-height:180px" placeholder="Full content, code snippets, notes..."></textarea></div>';
+    this.open('New Knowledge Entry', b, '<button class="btn btn-sec" id="mCancel6">Cancel</button><button class="btn btn-pri" id="kSave">Save</button>');
+    document.getElementById('kTitle').focus();
+    document.getElementById('kSave').addEventListener('click', function() {
+      var title = document.getElementById('kTitle').value.trim();
+      if (!title) { T.show('Title required', 'err'); return; }
+      DB.knowledge.add({ title: title, tags: document.getElementById('kTags').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean), content: document.getElementById('kContent').value.trim() });
+      self.close(); UI.render(); T.show('Entry saved');
+    });
+    document.getElementById('mCancel6').addEventListener('click', function() { self.close(); });
+  },
+
+  viewKnow: function(id) {
+    var k = DB.knowledge.get(id); if (!k) return;
+    var self = this;
+    var tags = '';
+    if (k.tags && k.tags.length) { for (var i = 0; i < k.tags.length; i++) tags += '<span class="ktag">' + U.esc(k.tags[i]) + '</span>'; }
+    var b = (tags ? '<div class="kcard-tags" style="margin-bottom:14px">' + tags + '</div>' : '') +
+      '<div style="font-size:14px;line-height:1.8;white-space:pre-wrap;color:var(--text-dim)">' + U.esc(k.content || '') + '</div>' +
+      '<div style="margin-top:18px;font-size:11px;color:var(--text-muted)">Created: ' + U.date(k.createdAt) + ' · Updated: ' + U.date(k.updatedAt) + '</div>';
+    this.open(k.title, b, '<button class="btn btn-del" id="mDelK">Delete</button><button class="btn btn-sec" id="mEditK">Edit</button><button class="btn btn-sec" id="mCancel7">Close</button>');
+    document.getElementById('mDelK').addEventListener('click', function() { if (confirm('Delete?')) { DB.knowledge.del(id); self.close(); UI.render(); T.show('Deleted'); } });
+    document.getElementById('mEditK').addEventListener('click', function() { self.close(); self.editKnow(id); });
+    document.getElementById('mCancel7').addEventListener('click', function() { self.close(); });
+  },
+
+  editKnow: function(id) {
+    var k = DB.knowledge.get(id); if (!k) return;
+    var self = this;
+    var b = '<div class="fg"><label class="fl">Title</label><input class="fi" id="kTitle" value="' + U.esc(k.title) + '" autofocus></div><div class="fg"><label class="fl">Tags</label><input class="fi" id="kTags" value="' + U.esc((k.tags || []).join(', ')) + '"></div><div class="fg"><label class="fl">Content</label><textarea class="fi" id="kContent" style="min-height:180px">' + U.esc(k.content || '') + '</textarea></div>';
+    this.open('Edit Entry', b, '<button class="btn btn-sec" id="mCancel8">Cancel</button><button class="btn btn-pri" id="kSave">Save</button>');
+    document.getElementById('kSave').addEventListener('click', function() {
+      DB.knowledge.upd(id, { title: document.getElementById('kTitle').value.trim(), tags: document.getElementById('kTags').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean), content: document.getElementById('kContent').value.trim() });
+      self.close(); UI.render(); T.show('Updated');
+    });
+    document.getElementById('mCancel8').addEventListener('click', function() { self.close(); });
+  },
+
+  addMs: function(pid) {
+    var self = this;
+    var b = '<div class="fg"><label class="fl">Milestone</label><input class="fi" id="mTitle" placeholder="e.g., MVP complete" autofocus></div><div class="fg"><label class="fl">Due Date</label><input class="fi" id="mDue" type="date"></div><div class="fg"><label class="fl">Description</label><textarea class="fi" id="mDesc" placeholder="Details..."></textarea></div>';
+    this.open('New Milestone', b, '<button class="btn btn-sec" id="mCancel9">Cancel</button><button class="btn btn-pri" id="mSave">Add</button>');
+    document.getElementById('mTitle').focus();
+    document.getElementById('mSave').addEventListener('click', function() {
+      var title = document.getElementById('mTitle').value.trim();
+      if (!title) { T.show('Title required', 'err'); return; }
+      DB.milestones.add({ projectId: pid, title: title, dueDate: document.getElementById('mDue').value, description: document.getElementById('mDesc').value.trim() });
+      self.close(); UI.render(); T.show('Milestone added');
+    });
+    document.getElementById('mCancel9').addEventListener('click', function() { self.close(); });
+  },
+
+  addBl: function(pid) {
+    var self = this;
+    var b = '<div class="fg"><label class="fl">Type</label><select class="fi" id="bType"><option value="build">Build</option><option value="deploy">Deploy</option><option value="error">Error</option><option value="test">Test</option><option value="note">Note</option></select></div><div class="fg"><label class="fl">Content</label><textarea class="fi" id="bContent" style="min-height:100px" placeholder="Build output, deploy notes..."></textarea></div>';
+    this.open('Build Log Entry', b, '<button class="btn btn-sec" id="mCancel10">Cancel</button><button class="btn btn-pri" id="bSave">Add</button>');
+    document.getElementById('bContent').focus();
+    document.getElementById('bSave').addEventListener('click', function() {
+      var content = document.getElementById('bContent').value.trim();
+      if (!content) { T.show('Content required', 'err'); return; }
+      DB.buildLogs.add({ projectId: pid, type: document.getElementById('bType').value, content: content });
+      self.close(); UI.render(); T.show('Entry added');
+    });
+    document.getElementById('mCancel10').addEventListener('click', function() { self.close(); });
+  },
+
+  addJr: function(pid) {
+    var self = this;
+    var b = '<div class="fg"><label class="fl">Journal Entry</label><textarea class="fi" id="jContent" style="min-height:150px" placeholder="What did you work on? What did you learn?" autofocus></textarea></div>';
+    this.open('Development Journal', b, '<button class="btn btn-sec" id="mCancel11">Cancel</button><button class="btn btn-pri" id="jSave">Save</button>');
+    document.getElementById('jContent').focus();
+    document.getElementById('jSave').addEventListener('click', function() {
+      var content = document.getElementById('jContent').value.trim();
+      if (!content) { T.show('Content required', 'err'); return; }
+      DB.journals.add({ projectId: pid, content: content });
+      self.close(); UI.render(); T.show('Entry saved');
+    });
+    document.getElementById('mCancel11').addEventListener('click', function() { self.close(); });
+  },
+
+  addLk: function(pid) {
+    var self = this;
+    var b = '<div class="fg"><label class="fl">URL</label><input class="fi" id="lUrl" placeholder="https://..." autofocus></div><div class="fg"><label class="fl">Title</label><input class="fi" id="lTitle" placeholder="Link title"></div><div class="fg"><label class="fl">Description</label><input class="fi" id="lDesc" placeholder="Why is this relevant?"></div>';
+    this.open('Add Link', b, '<button class="btn btn-sec" id="mCancel12">Cancel</button><button class="btn btn-pri" id="lSave">Add</button>');
+    document.getElementById('lUrl').focus();
+    document.getElementById('lSave').addEventListener('click', function() {
+      var url = document.getElementById('lUrl').value.trim();
+      if (!url) { T.show('URL required', 'err'); return; }
+      DB.links.add({ projectId: pid, url: url, title: document.getElementById('lTitle').value.trim(), description: document.getElementById('lDesc').value.trim() });
+      self.close(); UI.render(); T.show('Link added');
+    });
+    document.getElementById('mCancel12').addEventListener('click', function() { self.close(); });
+  },
+
+  bulkStatus: function(ids) {
+    var self = this;
+    var opts = ['idea', 'building', 'testing', 'stuck', 'deployed', 'dead'].map(function(s) { return '<option value="' + s + '">' + U.sLbl(s) + '</option>'; }).join('');
+    var b = '<div class="fg"><label class="fl">Set Status for ' + ids.length + ' Projects</label><select class="fi" id="bsSt">' + opts + '</select></div>';
+    this.open('Bulk Status', b, '<button class="btn btn-sec" id="mCancel13">Cancel</button><button class="btn btn-pri" id="bsGo">Apply</button>');
+    document.getElementById('bsGo').addEventListener('click', function() {
+      var st = document.getElementById('bsSt').value;
+      for (var i = 0; i < ids.length; i++) DB.projects.upd(ids[i], { status: st });
+      UI.clearSelected(); self.close(); UI.render(); T.show(ids.length + ' updated');
+    });
+    document.getElementById('mCancel13').addEventListener('click', function() { self.close(); });
+  },
+
+  bulkPriority: function(ids) {
+    var self = this;
+    var opts = ['critical', 'high', 'medium', 'low'].map(function(p) { return '<option value="' + p + '">' + U.pLbl(p) + '</option>'; }).join('');
+    var b = '<div class="fg"><label class="fl">Set Priority for ' + ids.length + ' Projects</label><select class="fi" id="bpPr">' + opts + '</select></div>';
+    this.open('Bulk Priority', b, '<button class="btn btn-sec" id="mCancel14">Cancel</button><button class="btn btn-pri" id="bpGo">Apply</button>');
+    document.getElementById('bpGo').addEventListener('click', function() {
+      var pr = document.getElementById('bpPr').value;
+      for (var i = 0; i < ids.length; i++) DB.projects.upd(ids[i], { priority: pr });
+      UI.clearSelected(); self.close(); UI.render(); T.show(ids.length + ' updated');
+    });
+    document.getElementById('mCancel14').addEventListener('click', function() { self.close(); });
+  },
+
+  shortcuts: function() {
+    var b = '<div class="sc-grid">' +
+      '<div class="sc-item"><span class="sc-key">N</span>New Project</div>' +
+      '<div class="sc-item"><span class="sc-key">/</span>Search</div>' +
+      '<div class="sc-item"><span class="sc-key">Esc</span>Close / Back</div>' +
+      '<div class="sc-item"><span class="sc-key">B</span>Toggle Sidebar</div>' +
+      '<div class="sc-item"><span class="sc-key">T</span>Toggle Theme</div>' +
+      '<div class="sc-item"><span class="sc-key">G D</span>Dashboard</div>' +
+      '<div class="sc-item"><span class="sc-key">G I</span>Ideas</div>' +
+      '<div class="sc-item"><span class="sc-key">G K</span>Knowledge</div>' +
+      '<div class="sc-item"><span class="sc-key">G A</span>Activity</div>' +
+      '<div class="sc-item"><span class="sc-key">?</span>Shortcuts</div>' +
+      '<div class="sc-item"><span class="sc-key">Ctrl+E</span>Export Data</div>' +
+      '</div>';
+    this.open('Keyboard Shortcuts', b, '<button class="btn btn-sec" onclick="M.close()">Close</button>');
+  }
+};
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+var T = {
+  box: document.getElementById('toastBox'),
+  show: function(msg, type) {
+    type = type || '';
+    var el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.textContent = msg;
+    this.box.appendChild(el);
+    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 3200);
+  }
+};
+
+/* ============================================================
+   KEYBOARD
+   ============================================================ */
+var kBuf = '', kTo;
+document.addEventListener('keydown', function(e) {
+  var tag = e.target.tagName;
+  var isInp = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable;
+
+  if (e.key === 'Escape') {
+    if (M.ov.classList.contains('open')) { M.close(); e.preventDefault(); return; }
+    if (S.view === 'project') { S.view = 'dashboard'; S.projId = null; UI.render(); e.preventDefault(); return; }
+    return;
+  }
+  if (isInp) return;
+  if (e.ctrlKey || e.metaKey) { if (e.key === 'e') { e.preventDefault(); exportData(); } return; }
+
+  clearTimeout(kTo);
+  kBuf += e.key.toLowerCase();
+  kTo = setTimeout(function() { kBuf = ''; }, 800);
+
+  if (kBuf === 'gd') { S.view = 'dashboard'; S.projId = null; S.qf = null; UI.render(); kBuf = ''; return; }
+  if (kBuf === 'gi') { S.view = 'ideas'; S.qf = null; UI.render(); kBuf = ''; return; }
+  if (kBuf === 'gk') { S.view = 'knowledge'; S.qf = null; UI.render(); kBuf = ''; return; }
+  if (kBuf === 'ga') { S.view = 'activity'; S.qf = null; UI.render(); kBuf = ''; return; }
+
+  switch (e.key) {
+    case 'n': case 'N': M.addProj(); break;
+    case '/': document.getElementById('gSearch').focus(); e.preventDefault(); break;
+    case 'b': case 'B': toggleSB(); break;
+    case 't': case 'T': Theme.toggle(); break;
+    case '?': M.shortcuts(); break;
+  }
+});
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+function toggleSB() {
+  S.sbOpen = !S.sbOpen;
+  document.getElementById('sidebar').classList.toggle('collapsed', !S.sbOpen);
+  document.getElementById('sbOverlay').classList.toggle('vis', S.sbOpen && window.innerWidth <= 900);
+}
+document.getElementById('sbToggle').addEventListener('click', toggleSB);
+document.getElementById('sbOverlay').addEventListener('click', function() { if (window.innerWidth <= 900) toggleSB(); });
+
+document.querySelectorAll('.nav-item').forEach(function(item) {
+  item.addEventListener('click', function() {
+    var v = this.dataset.view, f = this.dataset.filter, a = this.dataset.action;
+    if (v) { S.view = v; S.projId = null; S.qf = null; UI.render(); }
+    else if (f) { S.view = 'dashboard'; S.qf = f; S.sFilter = 'all'; UI.render(); }
+    else if (a === 'shortcuts') M.shortcuts();
+    else if (a === 'export') exportData();
+    else if (a === 'import') document.getElementById('impFile').click();
+    if (window.innerWidth <= 900 && S.sbOpen) toggleSB();
+  });
+  item.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); } });
+});
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+document.getElementById('bAddP').addEventListener('click', function() { M.addProj(); });
+document.getElementById('bAddI').addEventListener('click', function() { M.addIdea(); });
+document.getElementById('bAddK').addEventListener('click', function() { M.addKnow(); });
+document.getElementById('themeToggle').addEventListener('click', function() { Theme.toggle(); });
+
+var sTo;
+document.getElementById('gSearch').addEventListener('input', function(e) {
+  clearTimeout(sTo);
+  sTo = setTimeout(function() { S.q = e.target.value.trim(); UI.render(); }, 200);
+});
+
+document.getElementById('mClose').addEventListener('click', function() { M.close(); });
+document.getElementById('mOverlay').addEventListener('click', function(e) { if (e.target === this) M.close(); });
+
+/* ============================================================
+   EXPORT / IMPORT
+   ============================================================ */
+function exportData() {
+  try {
+    var data = {
+      version: '1.0', exportedAt: new Date().toISOString(),
+      projects: DB.projects.all(), tasks: DB.tasks.all(),
+      ideas: DB.ideas.all(), knowledge: DB.knowledge.all(),
+      milestones: DB.milestones.all(), buildLogs: DB.buildLogs.all(),
+      journals: DB.journals.all(), links: DB.links.all(),
+      activity: DB.act.all()
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'repo-os-export-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    T.show('Data exported');
+  } catch (e) { T.show('Export failed: ' + e.message, 'err'); }
+}
+
+document.getElementById('impFile').addEventListener('change', function(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var r = new FileReader();
+  r.onload = function(ev) {
+    try {
+      var d = JSON.parse(ev.target.result);
+      if (d.projects) DB.projects.save(d.projects);
+      if (d.tasks) DB.tasks.save(d.tasks);
+      if (d.ideas) DB.ideas.save(d.ideas);
+      if (d.knowledge) DB.knowledge.save(d.knowledge);
+      if (d.milestones) DB.milestones.save(d.milestones);
+      if (d.buildLogs) DB.buildLogs.save(d.buildLogs);
+      if (d.journals) DB.journals.save(d.journals);
+      if (d.links) DB.links.save(d.links);
+      if (d.activity) DB.act.save(d.activity);
+      UI.render(); T.show('Data imported', 'ok');
+    } catch (err) { T.show('Invalid file: ' + err.message, 'err'); }
+  };
+  r.readAsText(file);
+  e.target.value = '';
+});
+
+/* ============================================================
+   PWA ICONS (Canvas-generated)
+   ============================================================ */
+function genIcons() {
+  var sizes = [16, 32, 48, 72, 96, 128, 144, 152, 192, 384, 512];
+  var icons = {};
+  try {
+    for (var si = 0; si < sizes.length; si++) {
+      var sz = sizes[si];
+      var c = document.createElement('canvas');
+      c.width = sz; c.height = sz;
+      var x = c.getContext('2d');
+      x.fillStyle = '#111'; x.fillRect(0, 0, sz, sz);
+      x.strokeStyle = '#333'; x.lineWidth = Math.max(1, sz / 32);
+      x.strokeRect(sz * .08, sz * .08, sz * .84, sz * .84);
+      var fs = sz * .55;
+      x.fillStyle = '#e8e8e8'; x.font = 'bold ' + fs + 'px monospace';
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText('R', sz / 2, sz / 2);
+      icons[sz] = c.toDataURL('image/png');
+    }
+  } catch (e) { console.warn('Icon generation failed:', e.message); }
+  return icons;
+}
+
+function setupFavicon() {
+  var icons = genIcons();
+  if (!icons[32]) return;
+  var lk = document.querySelector('link[rel="icon"]');
+  if (!lk) { lk = document.createElement('link'); lk.rel = 'icon'; document.head.appendChild(lk); }
+  lk.href = icons[32];
+  var al = document.querySelector('link[rel="apple-touch-icon"]');
+  if (!al) { al = document.createElement('link'); al.rel = 'apple-touch-icon'; document.head.appendChild(al); }
+  if (icons[192]) al.href = icons[192];
+}
+
+function setupPWA() {
+  var icons = genIcons();
+  if (!icons[72]) return;
+
+  // Manifest via Blob URL
+  try {
+    var manifest = {
+      name: 'Repo Work Tracker OS',
+      short_name: 'RepoOS',
+      description: 'Personal execution command center',
+      start_url: '.',
+      display: 'standalone',
+      background_color: '#111111',
+      theme_color: '#111111',
+      icons: [
+        { src: icons[72], sizes: '72x72', type: 'image/png' },
+        { src: icons[96], sizes: '96x96', type: 'image/png' },
+        { src: icons[128], sizes: '128x128', type: 'image/png' },
+        { src: icons[144], sizes: '144x144', type: 'image/png' },
+        { src: icons[152], sizes: '152x152', type: 'image/png' },
+        { src: icons[192], sizes: '192x192', type: 'image/png' },
+        { src: icons[384], sizes: '384x384', type: 'image/png' },
+        { src: icons[512], sizes: '512x512', type: 'image/png' }
+      ]
+    };
+    var mb = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    var mu = URL.createObjectURL(mb);
+    var ml = document.querySelector('link[rel="manifest"]');
+    if (ml) ml.href = mu;
+  } catch (e) { console.warn('Manifest setup failed:', e.message); }
+
+  // Service Worker — gracefully degrades if Blob URL SW isn't supported
+  if ('serviceWorker' in navigator) {
+    try {
+      var swCode = "var C='rwos-v1';self.addEventListener('install',function(e){e.waitUntil(caches.open(C).then(function(c){return c.addAll(['/'])}));self.skipWaiting()});self.addEventListener('activate',function(e){e.waitUntil(caches.keys().then(function(k){return Promise.all(k.filter(function(x){return x!==C}).map(function(x){return caches.delete(x)}))}));self.clients.claim()});self.addEventListener('fetch',function(e){e.respondWith(caches.match(e.request).then(function(r){return r||fetch(e.request).then(function(resp){if(resp.status===200){var cl=resp.clone();caches.open(C).then(function(c){c.put(e.request,cl)})}return resp}).catch(function(){return caches.match('/')}))})});";
+      var sb = new Blob([swCode], { type: 'application/javascript' });
+      var su = URL.createObjectURL(sb);
+      navigator.serviceWorker.register(su).catch(function() {
+        // SW registration via Blob URL may not work in all browsers.
+        // The app functions fully without it — all data is in localStorage.
+      });
+    } catch (e) { /* SW setup failed — non-critical */ }
+  }
+
+  window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); });
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init() {
+  try {
+    Theme.init();
+    setupFavicon();
+    setupPWA();
+    ensureStarterIdeas();
+    UI.render();
+
+    if (window.innerWidth <= 900) {
+      S.sbOpen = false;
+      document.getElementById('sidebar').classList.add('collapsed');
+    }
+
+    window.addEventListener('resize', function() {
+      if (window.innerWidth <= 900 && S.sbOpen) {
+        document.getElementById('sbOverlay').classList.add('vis');
+      } else {
+        document.getElementById('sbOverlay').classList.remove('vis');
+      }
+    });
+  } catch (e) {
+    console.error('Init failed:', e);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
